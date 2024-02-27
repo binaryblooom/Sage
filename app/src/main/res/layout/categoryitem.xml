@@ -5,14 +5,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     app:cardCornerRadius="10dp"
+    android:id="@+id/categoryCard"
     android:layout_margin="5dp">
 
-    <RadioButton
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:id="@+id/categoryItem"
         tools:text="Computer Science"
-        android:pointerIcon="none"
         android:padding="10dp"
         />
 

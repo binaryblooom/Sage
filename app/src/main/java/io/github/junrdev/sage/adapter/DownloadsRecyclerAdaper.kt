@@ -14,10 +14,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.squareup.picasso.Picasso
 import io.github.junrdev.sage.R
 import io.github.junrdev.sage.model.FileItem
+import io.github.junrdev.sage.util.Constants
+import io.github.junrdev.sage.util.Constants.fileStorage
+import io.github.junrdev.sage.util.Constants.filesmetadata
 import io.github.junrdev.sage.util.Shared
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -34,7 +34,6 @@ class DownloadsRecyclerAdaper(
     val files: MutableList<FileItem>,
 ) : RecyclerView.Adapter<DownloadsRecyclerAdaper.VH>() {
 
-    val client = OkHttpClient()
 
     inner class VH(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
@@ -45,17 +44,10 @@ class DownloadsRecyclerAdaper(
 
         fun bind(fileItem: FileItem) {
 
-            /*if (fileItem.filePreview != null)
-                Picasso.get()
-                    .load(fileItem.filePreview)
-                    .placeholder(R.drawable.round_insert_drive_file_24)
-                    .into(preview)
-*/
-
             title.text = fileItem.fileName
             type.text = fileItem.fileType
 
-            val prev = when(fileItem.fileType){
+            val prev = when (fileItem.fileType) {
                 "image" -> R.drawable.picturepreview
                 else -> R.drawable.pdfpreview
             }
@@ -70,65 +62,51 @@ class DownloadsRecyclerAdaper(
                     .menuInflater
                     .inflate(R.menu.fileoptionmenu, pop.menu)
 
-                pop.setOnMenuItemClickListener {menu->
+                pop.setOnMenuItemClickListener { menu ->
                     when (menu.itemId) {
                         R.id.favourite -> {
-                            Shared.addToFavs.add(fileItem.fileDownloadUrl)
+                            Constants.favs.add(fileItem)
                             return@setOnMenuItemClickListener true
                         }
 
                         R.id.download -> {
-                            CoroutineScope(Dispatchers.IO).launch {
-//                                invoke download
-                                val saveDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                                val downloadedFile = File(saveDir, fileItem.fileName)
 
-                                Log.d(TAG, "bind: $fileItem")
+                            val client = OkHttpClient()
+                            val request = Request.Builder()
+                                .url(fileItem.fileDownloadUrl)
+                                .build()
 
-                                val req  = Request.Builder()
-                                    .url(fileItem.fileDownloadUrl)
-                                    .build()
+                            Toast.makeText(context, "Download started", Toast.LENGTH_SHORT).show()
 
-                                Log.d(TAG, "bind: $req")
+                            client.newCall(request)
+                                .enqueue(object : Callback{
+                                    override fun onFailure(call: Call, e: IOException) {
+                                        Log.d(TAG, "onFailure: Failed ${e.localizedMessage}")
+                                    }
 
-                                client.newCall(req)
-                                    .enqueue(object : Callback {
-                                        override fun onFailure(call: Call, e: IOException) {
-                                            Toast.makeText(context, "Failed please try again.", Toast.LENGTH_SHORT).show()
-                                            Log.d(TAG, "onFailure: ${e.localizedMessage}")
-                                        }
+                                    override fun onResponse(call: Call, response: Response) {
+                                        if (response.isSuccessful){
 
-                                        override fun onResponse(call: Call, response: Response) {
-                                            if (response.isSuccessful){
+                                            Log.d(TAG, "onResponse: ${response.body}")
 
-                                                val inputStream = response.body?.byteStream()
-                                                val op = FileOutputStream(downloadedFile)
+                                            val localfile = File(
+                                                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                                                fileItem.fileName
+                                            )
 
-                                                Log.d(TAG, "onResponse: $op")
-
-                                                op?.use {p->
-                                                    p.write(response.body!!.bytes())
-                                                    Toast.makeText(context, "File downloaded check downloads folder.", Toast.LENGTH_SHORT).show()
-
+                                            FileOutputStream(localfile).use {output->
+                                                response.body?.byteStream().use {input ->
+                                                    input?.copyTo(output)
                                                 }
-
-                                                /*
-                                                inputStream?.use {inp ->
-                                                    op.use { oup ->
-                                                        inp.copyTo(oup)
-                                                        Toast.makeText(context, "File downloaded check downloads folder.", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                                */
-
-                                            }else{
-                                                Toast.makeText(context, "Failed please try again.", Toast.LENGTH_SHORT).show()
                                             }
+//                                            Toast.makeText(context, "Download started", Toast.LENGTH_SHORT).show()
+                                            Log.d(TAG, "onResponse: Done")
                                         }
-                                    })
+                                    }
+                                })
 
-                            }
                             Toast.makeText(context, " Downloading File.", Toast.LENGTH_SHORT).show()
+
                             return@setOnMenuItemClickListener true
 //
                         }
@@ -145,6 +123,19 @@ class DownloadsRecyclerAdaper(
                 pop.show()
             }
         }
+
+        private fun updateFileInfo(fileItem: FileItem) {
+            filesmetadata.child(fileItem.fileId)
+                .updateChildren(mapOf(Pair("downloads", ++fileItem.downloads)))
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful && task.isComplete) {
+
+                    }
+                }.addOnFailureListener {
+                    Log.d(TAG, "updateFileInfo: Failed ${it.localizedMessage}")
+                }
+        }
+
 
     }
 

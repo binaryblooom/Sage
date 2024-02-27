@@ -7,7 +7,6 @@ import androidx.appcompat.app.AppCompatActivity
 import io.github.junrdev.sage.R
 import io.github.junrdev.sage.activities.fragments.UploadDocuments
 import io.github.junrdev.sage.activities.fragments.UploadImages
-import io.github.junrdev.sage.model.SelectedItem
 
 class Upload : AppCompatActivity() {
 

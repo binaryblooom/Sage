@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -12,21 +11,23 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.CheckBox
+import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.customview.widget.Openable
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import io.github.junrdev.sage.R
 import io.github.junrdev.sage.adapter.SelectedFileAdapter
 import io.github.junrdev.sage.model.FileItem
 import io.github.junrdev.sage.model.SelectedItem
-import io.github.junrdev.sage.model.User
 import io.github.junrdev.sage.util.Constants
 import io.github.junrdev.sage.util.Constants.auth
 import io.github.junrdev.sage.util.Constants.filesblob
@@ -42,19 +43,58 @@ class UploadDocuments : AppCompatActivity() {
     private val uploaded: MutableList<String> = mutableListOf()
     private lateinit var filesRecycler: RecyclerView
     private lateinit var toolbar: Toolbar
+    private lateinit var uploadingProgress: CircularProgressIndicator
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_upload_documents)
-
         filesRecycler = findViewById(R.id.filesRecycler)
         toolbar = findViewById(R.id.toolbar)
+        uploadingProgress = findViewById(R.id.uploadingProgress)
         setSupportActionBar(toolbar)
 
         filesRecycler.layoutManager =
             LinearLayoutManager(applicationContext, LinearLayoutManager.VERTICAL, false)
-        adapter = SelectedFileAdapter(applicationContext, selectedFiles)
+        adapter = SelectedFileAdapter(applicationContext, selectedFiles) { showBottomDialog(it) }
         filesRecycler.adapter = adapter
+    }
+
+    private fun showBottomDialog(position: Int) {
+        val bottomSheetDialog = BottomSheetDialog(this)
+        val cur = selectedFiles[position]
+        Log.d(TAG, "onBindViewHolder: $cur")
+        bottomSheetDialog.setContentView(R.layout.editselecteditemdetailsbottomsheet)
+
+        val title = bottomSheetDialog.findViewById<TextView>(R.id.fileTitle)
+        title?.text = selectedFiles[position].fname
+
+
+        val bio = bottomSheetDialog.findViewById<CheckBox>(R.id.biology)
+        val maths = bottomSheetDialog.findViewById<CheckBox>(R.id.maths)
+        val ss = bottomSheetDialog.findViewById<CheckBox>(R.id.socialScience)
+        val research = bottomSheetDialog.findViewById<CheckBox>(R.id.research)
+        val literature = bottomSheetDialog.findViewById<CheckBox>(R.id.literature)
+        val programming = bottomSheetDialog.findViewById<CheckBox>(R.id.programming)
+        val save = bottomSheetDialog.findViewById<CardView>(R.id.saveItem)
+
+        save?.setOnClickListener {
+            if (bio?.isChecked!!)
+                cur.categories.add("Biology")
+            if (maths?.isChecked!!)
+                cur.categories.add("Maths")
+            if (ss?.isChecked!!)
+                cur.categories.add("Social Science")
+            if (research?.isChecked!!)
+                cur.categories.add("Research")
+            if (literature?.isChecked!!)
+                cur.categories.add("Literature")
+            if (programming?.isChecked!!)
+                cur.categories.add("Programming")
+
+            bottomSheetDialog.dismiss()
+
+            bottomSheetDialog.show()
+        }
     }
 
     fun openFileSelector(view: View) {
@@ -177,16 +217,20 @@ class UploadDocuments : AppCompatActivity() {
 
                 // upload file
                 if (upload.isSuccessful && upload.isComplete) {
+
                     task.downloadUrl.addOnCompleteListener { dl ->
 
                         // get download url
                         if (dl.isSuccessful && dl.isComplete) {
-                            Log.d(TAG, "uploadDocuments: ${dl.result}")
+                            Log.d(TAG, "uploadDocuments: url ${dl.result}")
+                            Log.d(TAG, "uploadDocuments: name ${task.name}")
 
-                            val id = filesmetadata.document().id
-                            val up = FileItem(
+                            val id = filesmetadata.push().key!!
+
+                            val fileUp = FileItem(
                                 fileId = id,
                                 fileName = file.fname,
+                                storageName = task.name,
                                 fileDownloadUrl = "${dl.result}",
                                 fileType = "pdf",
                                 uploadedBy = auth.uid!!,
@@ -194,99 +238,20 @@ class UploadDocuments : AppCompatActivity() {
                                 categories = listOf("pdf")
                             )
 
-                            filesmetadata.document(id)
-                                .set(up)
-                                .addOnCompleteListener { save ->
-
-                                    // save metadata to firestore
-                                    if (save.isComplete && save.isSuccessful) {
-                                        uploaded.add(up.fileId)
-                                        selectedFiles.remove(file)
-                                        adapter.notifyItemRemoved(index)
-                                        Log.d(TAG, "uploadDocuments: saved doc $id")
-                                    }
-                                }
-                                .addOnFailureListener {
-                                    Log.d(
-                                        TAG,
-                                        "saveFileMetadata: failed to save $upload error ${it.localizedMessage}"
-                                    )
-                                }
+                            filesmetadata.child(id)
+                                .setValue(fileUp)
+                                .addOnCompleteListener { }
+                                .addOnFailureListener { }
                         }
                     }
                 }
             }.addOnFailureListener {
-                Log.d(TAG, "uploadDocuments: failed to upload $file error ${it.localizedMessage}")
+                Log.d(
+                    TAG,
+                    "uploadDocuments: failed to upload $file error ${it.localizedMessage}"
+                )
             }
         }
-
-//        runOnUiThread {
-//            if (selectedFiles.isEmpty()) {
-//                SaveUserDataInBackground().execute(uploaded)
-//            }
-//        }
     }
 
-    override fun onBackPressed() {
-        super.onBackPressed()
-        // check if list is empty and prompt use
-        /*
-        if (selectedFiles.isNotEmpty()) {
-
-            val dialog = AlertDialog.Builder(applicationContext)
-
-            dialog.setTitle("Are you sure you want to exit ?")
-            dialog.setMessage("You have ${selectedFiles.size} documents awaiting upload.\nThese will be discarded if you continue.")
-            dialog.setNegativeButton("Continue") { _dialog, _d ->
-                super.onBackPressed()
-            }
-
-            dialog.setOnDismissListener {
-                it.dismiss()
-            }
-
-            dialog.show()
-        }
-        */
-
-    }
-
-
-    /*
-    class SaveUserDataInBackground : AsyncTask<MutableList<String>, Void, Boolean>() {
-
-        var isDone = false
-
-        override fun doInBackground(vararg params: MutableList<String>?): Boolean {
-
-
-            val d = params[0]
-            Log.d(TAG, "doInBackground: $d")
-
-            Constants.usersmetadata.document(auth.uid!!)
-                .addSnapshotListener { data, ex ->
-
-                    if (data!!.exists()) {
-                        data!!.toObject(User::class.java)
-                            ?.uploads?.addAll(d!!)
-
-                        isDone = true
-                    }
-
-                    if (ex != null) {
-                        Log.d(TAG, "doInBackground: failed ${ex.localizedMessage}")
-                    }
-                }
-            return isDone
-        }
-
-        override fun onPostExecute(result: Boolean?) {
-            super.onPostExecute(result)
-            if (isDone)
-                Log.d(TAG, "onPostExecute: saved user data")
-            else
-                Log.d(TAG, "onPostExecute: failed to save data")
-        }
-    }
-    */
 }

@@ -1,37 +1,42 @@
 package io.github.junrdev.sage.activities
 
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.RadioButton
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.github.junrdev.sage.R
+import io.github.junrdev.sage.activities.fragments.FilterResult
 import io.github.junrdev.sage.adapter.DownloadsRecyclerAdaper
 import io.github.junrdev.sage.model.FileItem
+import io.github.junrdev.sage.util.Constants
 import io.github.junrdev.sage.util.Constants.filesmetadata
 
 private const val TAG = "Downloads"
 
 class Downloads : AppCompatActivity() {
 
-    private lateinit var adapter: CategoriesRecyclerAdapter
+    private lateinit var categoriesRecyclerAdapter: CategoriesRecyclerAdapter
     private var files: MutableList<FileItem> = mutableListOf()
     private lateinit var filesRecycler: RecyclerView
     private lateinit var categoriesRecycler: RecyclerView
 
-    private val categories = mutableListOf<String>(
-        "All",
+    private val categories = mutableListOf(
+        "pdf",
         "Computer Science",
+        "images",
         "Nursing",
         "Programming",
-        "Acturial Science",
-        "Biology",
-        "Edu",
-        "Agriculture"
+        "Acturial Science"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,69 +49,86 @@ class Downloads : AppCompatActivity() {
             LinearLayoutManager(applicationContext, LinearLayoutManager.VERTICAL, false)
         categoriesRecycler.layoutManager =
             LinearLayoutManager(applicationContext, LinearLayoutManager.HORIZONTAL, false)
-        filesRecycler.adapter = DownloadsRecyclerAdaper(applicationContext, files)
+        categoriesRecyclerAdapter = CategoriesRecyclerAdapter(categories){ categoryName ->
+            val filterRes = Intent(this, FilterResult::class.java)
+            filterRes.putExtra("cat", categoryName)
+            startActivity(filterRes)
+
+        }
+        categoriesRecycler.adapter = categoriesRecyclerAdapter
+
+        if (!checkWritePermissions())
+            requestWriteAccess()
 
         filesmetadata
             .get()
-            .addOnCompleteListener { fileTask ->
-                if (fileTask.isComplete && fileTask.isSuccessful) {
-                    val _files = fileTask.result
+            .addOnCompleteListener { dataSnapshotTask ->
+                if (dataSnapshotTask.isComplete && dataSnapshotTask.isSuccessful) {
+                    if (dataSnapshotTask.result.hasChildren()) {
 
-                    Log.d(TAG, "onCreate: $_files")
-                    Log.d(TAG, "onCreate: ${_files.documents.size}")
-                    Log.d(TAG, "onCreate: ${_files.documents}")
-
-                    if (!_files.isEmpty) {
-
-                        Log.d(
-                            TAG,
-                            "onCreate: fetched (${_files.documents.size}) -> ${_files.documents}"
-                        )
-
-                        for (doc in _files.documents)
-                            doc.toObject(FileItem::class.java)?.let {
-                                files.add(it)
+                        dataSnapshotTask.result.children
+                            .forEach { snap ->
+                                if (snap.exists()) {
+                                    val data = snap.getValue(FileItem::class.java)!!
+                                    Log.d(TAG, "onCreate: $data")
+                                    files.add(data)
+                                }
                             }
 
-                        if (files.isNotEmpty()){
-                            adapter = CategoriesRecyclerAdapter(categories)
-                            categoriesRecycler.adapter = adapter
+                        runOnUiThread {
+
+                            if (files.isNotEmpty())
+                                filesRecycler.adapter =
+                                    DownloadsRecyclerAdaper(applicationContext, files)
+
                         }
 
                     }
                 }
             }
-            .addOnFailureListener {
-                Log.d(TAG, "onCreate: ${it.localizedMessage}")
-            }
-
+            .addOnFailureListener { ex -> Log.d(TAG, "onCreate: $ex") }
     }
 
-    class CategoriesRecyclerAdapter(
-        private val categories: MutableList<String>
-    ) : RecyclerView.Adapter<CategoriesRecyclerAdapter.VH>() {
 
-        class VH(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    private fun checkWritePermissions() =
+        ContextCompat.checkSelfPermission(
+            this,
+            android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
 
-            private val radioButton = itemView.findViewById<RadioButton>(R.id.categoryItem)
-
-            fun bind(title: String) {
-                radioButton.text = title
-                radioButton.setOnClickListener {
-                    if (radioButton.isChecked)
-                        radioButton.isChecked = !radioButton.isChecked
-                }
-            }
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
-            VH(LayoutInflater.from(parent.context).inflate(R.layout.categoryitem, parent, false))
-
-        override fun getItemCount(): Int = categories.size
-
-        override fun onBindViewHolder(holder: VH, position: Int) {
-            holder.bind(categories[position])
-        }
+    fun requestWriteAccess() {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
+            Constants.FILE_PICK_CODE
+        )
     }
-
 }
+
+class CategoriesRecyclerAdapter(private val categories: MutableList<String>, val onCategorySelect : (categoryName : String) -> Unit) : RecyclerView.Adapter<CategoriesRecyclerAdapter.VH>() {
+
+    class VH(itemView: View) : RecyclerView.ViewHolder(itemView) {
+
+        private val category = itemView.findViewById<TextView>(R.id.categoryItem)
+        private val categoryCard = itemView.findViewById<CardView>(R.id.categoryCard)
+
+        fun bind(title: String, onClick : (cat : String) -> Unit) {
+            category.text = title
+            categoryCard.setOnClickListener {
+                onClick(title)
+            }
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
+        VH(LayoutInflater.from(parent.context).inflate(R.layout.categoryitem, parent, false))
+
+    override fun getItemCount(): Int = categories.size
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        holder.bind(categories[position]){
+            onCategorySelect(it)
+        }
+    }
+}
+

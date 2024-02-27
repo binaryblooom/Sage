@@ -4,5 +4,6 @@ import android.net.Uri
 
 data class SelectedItem(
     val uri : Uri,
-    val fname : String
+    val fname : String,
+    val categories : MutableList<String> = mutableListOf()
 )

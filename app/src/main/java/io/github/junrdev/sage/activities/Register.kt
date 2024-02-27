@@ -3,14 +3,12 @@ package io.github.junrdev.sage.activities
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import com.google.android.material.textfield.TextInputEditText
 import io.github.junrdev.sage.R
 import io.github.junrdev.sage.model.User
-import io.github.junrdev.sage.util.Constants
 import io.github.junrdev.sage.util.Constants.auth
 import io.github.junrdev.sage.util.Constants.usersmetadata
 

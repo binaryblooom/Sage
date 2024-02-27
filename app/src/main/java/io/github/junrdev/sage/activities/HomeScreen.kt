@@ -8,7 +8,10 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import io.github.junrdev.sage.R
+import io.github.junrdev.sage.SplashScreen
+import io.github.junrdev.sage.activities.fragments.FilterResult
 import io.github.junrdev.sage.util.Constants.auth
+import io.github.junrdev.sage.util.Constants.favs
 
 class HomeScreen : AppCompatActivity() {
 
@@ -37,12 +40,12 @@ class HomeScreen : AppCompatActivity() {
         when (item.itemId) {
             R.id.logout -> {
                 auth.signOut()
-                startActivity(Intent(this, Login::class.java))
+                startActivity(Intent(this, SplashScreen::class.java))
                 finish()
                 true
             }
 
-            R.id.notifications -> {
+            R.id.account -> {
                 Toast.makeText(applicationContext, "Notify", Toast.LENGTH_SHORT).show()
                 true
             }
@@ -50,5 +53,18 @@ class HomeScreen : AppCompatActivity() {
             else -> super.onOptionsItemSelected(item)
         }
 
-    fun openFavourites(view: View) {}
+    fun openFavourites(view: View) {
+        if (favs.isEmpty()) {
+            Toast.makeText(applicationContext, "No items added.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val favs = Intent(this, FilterResult::class.java)
+        favs.putExtra("content", "favs")
+        startActivity(favs)
+    }
+
+    fun openHowToSection(view: View) {
+        Toast.makeText(applicationContext, "Under Implementation", Toast.LENGTH_SHORT).show()
+    }
 }

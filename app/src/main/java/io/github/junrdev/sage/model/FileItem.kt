@@ -6,11 +6,12 @@ import java.util.Date
 data class FileItem(
     var fileId: String = "",
     val fileName: String = "",
+    val storageName: String = "",
     val fileDownloadUrl: String = "",
     val filePreview: String? = null,
     val fileType: String = "",
     val uploadedBy: String = "",
     val uploadDate: String = Date(System.currentTimeMillis()).toString(),
-    val downloads: Int = 0,
+    var downloads: Int = 0,
     val categories: List<String> = emptyList()
 )

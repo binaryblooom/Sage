@@ -7,7 +7,6 @@ import android.widget.RelativeLayout
 import androidx.appcompat.app.AppCompatActivity
 import io.github.junrdev.sage.activities.HomeScreen
 import io.github.junrdev.sage.activities.Register
-import io.github.junrdev.sage.databinding.ActivityMainBinding
 import io.github.junrdev.sage.util.Constants
 
 class MainActivity : AppCompatActivity() {

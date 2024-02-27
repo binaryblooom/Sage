@@ -10,14 +10,19 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.CheckBox
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.github.dhaval2404.imagepicker.ImagePicker
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import io.github.junrdev.sage.R
 import io.github.junrdev.sage.adapter.SelectedImagesRecyclerAdapter
 import io.github.junrdev.sage.model.FileItem
@@ -35,23 +40,64 @@ class UploadImages : AppCompatActivity() {
     private var selectedImages = mutableListOf<SelectedItem>()
     private lateinit var adapter: SelectedImagesRecyclerAdapter
     private lateinit var toolbar: Toolbar
+    private lateinit var uploadingProgress: CircularProgressIndicator
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_upload_images)
         toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
-
+        uploadingProgress = findViewById(R.id.uploadingProgress)
 
         imagesrecycler = findViewById(R.id.selectedImagesrecycler)
-        imagesrecycler.layoutManager = LinearLayoutManager(applicationContext, LinearLayoutManager.HORIZONTAL, false)
-        adapter = SelectedImagesRecyclerAdapter(selectedImages, applicationContext)
+        imagesrecycler.layoutManager =
+            LinearLayoutManager(applicationContext, LinearLayoutManager.HORIZONTAL, false)
+        adapter = SelectedImagesRecyclerAdapter(selectedImages, applicationContext) {
+            showBottomDialog(it)
+        }
         imagesrecycler.adapter = adapter
 
     }
 
+    private fun showBottomDialog(position: Int) {
+        val bottomSheetDialog = BottomSheetDialog(this)
+        val cur = selectedImages[position]
+        Log.d(TAG, "onBindViewHolder: $cur")
+        bottomSheetDialog.setContentView(R.layout.editselecteditemdetailsbottomsheet)
+
+        val title = bottomSheetDialog.findViewById<TextView>(R.id.fileTitle)
+        title?.text = selectedImages[position].fname
+
+        val bio = bottomSheetDialog.findViewById<CheckBox>(R.id.biology)
+        val maths = bottomSheetDialog.findViewById<CheckBox>(R.id.maths)
+        val ss = bottomSheetDialog.findViewById<CheckBox>(R.id.socialScience)
+        val research = bottomSheetDialog.findViewById<CheckBox>(R.id.research)
+        val literature = bottomSheetDialog.findViewById<CheckBox>(R.id.literature)
+        val programming = bottomSheetDialog.findViewById<CheckBox>(R.id.programming)
+        val save = bottomSheetDialog.findViewById<CardView>(R.id.saveItem)
+
+        save?.setOnClickListener {
+            if (bio?.isChecked!!)
+                cur.categories.add("Biology")
+            if (maths?.isChecked!!)
+                cur.categories.add("Maths")
+            if (ss?.isChecked!!)
+                cur.categories.add("Social Science")
+            if (research?.isChecked!!)
+                cur.categories.add("Research")
+            if (literature?.isChecked!!)
+                cur.categories.add("Literature")
+            if (programming?.isChecked!!)
+                cur.categories.add("Programming")
+
+            bottomSheetDialog.dismiss()
+        }
+
+        bottomSheetDialog.show()
+    }
+
     fun selectImage(view: View) {
-        if (intent.hasExtra("type")){
+        if (intent.hasExtra("type")) {
 
             if (intent.getStringExtra("type").equals("gallery"))
                 ImagePicker.with(this)
@@ -64,6 +110,7 @@ class UploadImages : AppCompatActivity() {
                 openCamera(view)
         }
     }
+
     fun openCamera(view: View) {
         ImagePicker.with(this)
             .cameraOnly()
@@ -100,7 +147,11 @@ class UploadImages : AppCompatActivity() {
                 val _file = SelectedItem(uri = content, fname)
 
                 if (selectedImages.contains(_file))
-                    Toast.makeText(applicationContext, "Please select another image.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        applicationContext,
+                        "Please select another image.",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 else {
                     selectedImages.add(_file)
                     adapter.notifyItemInserted(selectedImages.size - 1)
@@ -153,13 +204,20 @@ class UploadImages : AppCompatActivity() {
 
                                     if (url.isComplete && url.isSuccessful) {
 
-                                        val id = filesmetadata.document().id
+                                        val id = filesmetadata.push().key!!
                                         val dlurl = "${url.result}"
 
                                         Log.d(TAG, "onOptionsItemSelected: $dlurl")
-                                        filesmetadata.document(id)
-                                            .set(
-                                                FileItem(fileId = id, fileName = image.fname, fileType = "image", fileDownloadUrl = dlurl, categories = listOf("images"), filePreview = dlurl)
+                                        filesmetadata.child(id)
+                                            .setValue(
+                                                FileItem(
+                                                    fileId = id,
+                                                    fileName = image.fname,
+                                                    fileType = "image",
+                                                    fileDownloadUrl = dlurl,
+                                                    categories = listOf("images"),
+                                                    filePreview = dlurl
+                                                )
                                             )
                                             .addOnCompleteListener { save ->
                                                 if (save.isComplete && save.isSuccessful) {
@@ -167,7 +225,10 @@ class UploadImages : AppCompatActivity() {
                                                     adapter.notifyItemRemoved(index)
                                                 }
                                             }.addOnFailureListener {
-                                                Log.d(TAG, "onOptionsItemSelected: ${it.localizedMessage}")
+                                                Log.d(
+                                                    TAG,
+                                                    "onOptionsItemSelected: ${it.localizedMessage}"
+                                                )
                                             }
                                     }
                                 }
