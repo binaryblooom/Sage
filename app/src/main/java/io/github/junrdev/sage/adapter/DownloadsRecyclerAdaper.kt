@@ -44,14 +44,25 @@ class DownloadsRecyclerAdaper(
         val type = itemView.findViewById<TextView>(R.id.fileType)
 
         fun bind(fileItem: FileItem) {
-            if (fileItem.filePreview != null)
+
+            /*if (fileItem.filePreview != null)
                 Picasso.get()
                     .load(fileItem.filePreview)
                     .placeholder(R.drawable.round_insert_drive_file_24)
                     .into(preview)
+*/
 
             title.text = fileItem.fileName
             type.text = fileItem.fileType
+
+            val prev = when(fileItem.fileType){
+                "image" -> R.drawable.picturepreview
+                else -> R.drawable.pdfpreview
+            }
+
+            Picasso.get()
+                .load(prev)
+                .into(preview)
 
             optionsMenu.setOnClickListener {
                 val pop = PopupMenu(context, it)

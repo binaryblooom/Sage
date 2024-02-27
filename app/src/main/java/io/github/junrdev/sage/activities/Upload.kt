@@ -27,4 +27,10 @@ class Upload : AppCompatActivity() {
         uploadImages.putExtra("type", "gallery")
         startActivity(uploadImages)
     }
+
+    fun openUploadCamera(view: View) {
+        val openCamera = Intent(this, UploadImages::class.java)
+        openCamera.putExtra("type", "camera")
+        startActivity(openCamera)
+    }
 }

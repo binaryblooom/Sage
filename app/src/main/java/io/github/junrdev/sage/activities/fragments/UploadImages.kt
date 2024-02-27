@@ -3,7 +3,9 @@ package io.github.junrdev.sage.activities.fragments
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -45,14 +47,28 @@ class UploadImages : AppCompatActivity() {
         imagesrecycler.layoutManager = LinearLayoutManager(applicationContext, LinearLayoutManager.HORIZONTAL, false)
         adapter = SelectedImagesRecyclerAdapter(selectedImages, applicationContext)
         imagesrecycler.adapter = adapter
+
     }
 
     fun selectImage(view: View) {
+        if (intent.hasExtra("type")){
+
+            if (intent.getStringExtra("type").equals("gallery"))
+                ImagePicker.with(this)
+                    .galleryOnly()
+                    .crop()
+                    .compress(3072)
+                    .galleryMimeTypes(arrayOf("image/png", "image/jpg", "image/jpeg"))
+                    .start()
+            else
+                openCamera(view)
+        }
+    }
+    fun openCamera(view: View) {
         ImagePicker.with(this)
-            .galleryOnly()
+            .cameraOnly()
             .crop()
             .compress(3072)
-            .galleryMimeTypes(arrayOf("image/png", "image/jpg", "image/jpeg"))
             .start()
     }
 
@@ -80,14 +96,11 @@ class UploadImages : AppCompatActivity() {
             if (requestCode == ImagePicker.REQUEST_CODE) {
 
                 val content = data?.data!!
-                val _file = SelectedItem(uri = content, "${content.lastPathSegment}")
+                val fname = getFileName(content)
+                val _file = SelectedItem(uri = content, fname)
 
                 if (selectedImages.contains(_file))
-                    Toast.makeText(
-                        applicationContext,
-                        "Please select another image.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(applicationContext, "Please select another image.", Toast.LENGTH_SHORT).show()
                 else {
                     selectedImages.add(_file)
                     adapter.notifyItemInserted(selectedImages.size - 1)
@@ -173,4 +186,24 @@ class UploadImages : AppCompatActivity() {
         }
         return super.onOptionsItemSelected(item)
     }
+
+    private fun getFileName(uri: Uri): String {
+        var fname: String? = null
+
+        contentResolver.query(uri, null, null, null, null)
+            ?.use {
+                if (it.moveToFirst()!!)
+                    fname = it.getString(it.getColumnIndex(OpenableColumns.DISPLAY_NAME))
+            }
+        if (fname == null) {
+            fname = uri.path
+            val cut = fname?.lastIndexOf('/')
+            if (cut != -1) {
+                fname = fname?.substring(cut!! + 1)
+            }
+        }
+
+        return fname!!
+    }
+
 }

@@ -3,9 +3,11 @@ package io.github.junrdev.sage.activities.fragments
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -17,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.customview.widget.Openable
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.github.junrdev.sage.R
@@ -101,7 +104,12 @@ class UploadDocuments : AppCompatActivity() {
 
 
                 data?.data?.let { uri ->
-                    val _file = SelectedItem(uri, "${uri.lastPathSegment}")
+
+                    var fname = getFileName(uri)
+
+                    Log.d(TAG, "onActivityResult: $fname")
+
+                    val _file = SelectedItem(uri, fname)
 
                     if (selectedFiles.contains(_file))
                         Toast.makeText(
@@ -118,6 +126,25 @@ class UploadDocuments : AppCompatActivity() {
             }
 
         }
+    }
+
+    private fun getFileName(uri: Uri): String {
+        var fname: String? = null
+
+        contentResolver.query(uri, null, null, null, null)
+            ?.use {
+                if (it.moveToFirst()!!)
+                    fname = it.getString(it.getColumnIndex(OpenableColumns.DISPLAY_NAME))
+            }
+        if (fname == null) {
+            fname = uri.path
+            val cut = fname?.lastIndexOf('/')
+            if (cut != -1) {
+                fname = fname?.substring(cut!! + 1)
+            }
+        }
+
+        return fname!!
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -193,11 +220,11 @@ class UploadDocuments : AppCompatActivity() {
             }
         }
 
-        runOnUiThread {
-            if (selectedFiles.isEmpty()) {
-                SaveUserDataInBackground().execute(uploaded)
-            }
-        }
+//        runOnUiThread {
+//            if (selectedFiles.isEmpty()) {
+//                SaveUserDataInBackground().execute(uploaded)
+//            }
+//        }
     }
 
     override fun onBackPressed() {
@@ -225,6 +252,7 @@ class UploadDocuments : AppCompatActivity() {
     }
 
 
+    /*
     class SaveUserDataInBackground : AsyncTask<MutableList<String>, Void, Boolean>() {
 
         var isDone = false
@@ -260,4 +288,5 @@ class UploadDocuments : AppCompatActivity() {
                 Log.d(TAG, "onPostExecute: failed to save data")
         }
     }
+    */
 }

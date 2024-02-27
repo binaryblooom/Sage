@@ -19,7 +19,7 @@
         android:id="@+id/selectedImagesrecycler"
         android:layout_width="wrap_content"
         android:layout_height="0dp"
-        android:layout_margin="30dp"
+        android:layout_margin="20dp"
         android:layout_weight="8"
         android:elevation="10dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"

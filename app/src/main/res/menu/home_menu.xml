@@ -7,7 +7,7 @@
         <item
             android:id="@+id/notifications"
             android:icon="@drawable/round_notifications_24"
-            android:iconTint="#514E4E"
+            android:iconTint="#FF6D00"
             android:title="Notifications"
             app:showAsAction="always"
             />
