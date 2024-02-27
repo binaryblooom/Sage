@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "84942333227",
+    "project_id": "junrdev-apps",
+    "storage_bucket": "junrdev-apps.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:84942333227:android:c9511cc38b696d0fb1516e",
+        "android_client_info": {
+          "package_name": "io.github.junrdev.edocs"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyjAazrjFssFgn02i56uAUvQyrHCsvEpM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:84942333227:android:b17810506c6fb9f7b1516e",
+        "android_client_info": {
+          "package_name": "io.github.junrdev.sage"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyjAazrjFssFgn02i56uAUvQyrHCsvEpM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

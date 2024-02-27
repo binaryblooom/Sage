@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+    <item
+        android:id="@+id/favourite"
+        android:icon="@drawable/round_favorite_24"
+        android:title="Favourite" />
+
+    <item
+        android:id="@+id/download"
+        android:icon="@drawable/round_download_for_offline_24"
+        android:title="Download" />
+
+    <item
+        android:id="@+id/wrongDetails"
+        android:icon="@drawable/round_info_outline_24"
+        android:title="Wrong Details" />
+
+
+</menu>
